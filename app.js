@@ -1,3 +1,4 @@
+var siteAuth = localStorage.getItem('lunex_site_auth') || false;
 var currentEditingName = null;
 var currentLogsData = [];
 
@@ -20,7 +21,7 @@ function apiCall(path, data, method) {
   return fetch(path, options).then(function(res) { return res.json(); });
 }
 
-// دالة توليد مفتاح عشوائي تلقائي مثل ls-28710461083
+// دالة توليد مفتاح عشوائي للسورسات مثل ls-28710461083
 function generateRandomKey() {
   var randomDigits = Math.floor(10000000000 + Math.random() * 90000000000);
   var generatedKey = 'ls-' + randomDigits;
@@ -33,14 +34,58 @@ function generateRandomKey() {
 
 function render() {
   var app = document.getElementById('app');
-  app.innerHTML = renderDashboardHTML();
-  loadUserScripts();
+  if (!siteAuth) {
+    app.innerHTML = renderSiteAuthHTML();
+  } else {
+    app.innerHTML = renderDashboardHTML();
+    loadUserScripts();
+  }
+}
+
+// واجهة إدخال مفتاح دخول الموقع
+function renderSiteAuthHTML() {
+  return '<header>' +
+    '<h1 class="logo">Lunex<span>Script</span></h1>' +
+    '<span style="color:var(--text-muted); font-size:13px;">حماية لوحة التحكم</span>' +
+  '</header>' +
+  '<div class="card" style="max-width: 400px; margin: 60px auto;">' +
+    '<h2>أدخل مفتاح دخول الموقع</h2>' +
+    '<p class="hint" style="margin-bottom:15px;">يجب إدخال مفتاح الدخول الصحيح لفتح لوحة التحكم.</p>' +
+    '<form onsubmit="handleSiteAuth(event)">' +
+      '<input type="password" id="siteKeyInput" placeholder="أدخل المفتاح هنا..." required autofocus />' +
+      '<button type="submit" style="width:100%; margin-top:10px;">دخول لوحة التحكم</button>' +
+    '</form>' +
+  '</div>';
+}
+
+function handleSiteAuth(e) {
+  e.preventDefault();
+  var key = document.getElementById('siteKeyInput').value.trim();
+
+  apiCall('/api/verify-site-key', { key: key }).then(function(res) {
+    if (res.success) {
+      siteAuth = true;
+      localStorage.setItem('lunex_site_auth', 'true');
+      showToast('تم التحقق بنجاح، أهلاً بك!');
+      render();
+    } else {
+      showToast('مفتاح الدخول غير صحيح!', 'error');
+    }
+  });
+}
+
+function logoutSite() {
+  localStorage.removeItem('lunex_site_auth');
+  siteAuth = false;
+  showToast('تم تسجيل الخروج من الموقع');
+  render();
 }
 
 function renderDashboardHTML() {
   var domain = window.location.host;
   return '<header>' +
-    '<h1 class="logo">Lunex<span>Script</span> <span style="font-size:14px; color:var(--text-muted); font-weight:normal;">| نظام المفاتيح والسورسات</span></h1>' +
+    '<h1 class="logo">Lunex<span>Script</span> <span style="font-size:14px; color:var(--text-muted); font-weight:normal;">| لوحة التحكم الآمنة</span></h1>' +
+    '<button class="secondary" onclick="logoutSite()">تسجيل خروج</button>' +
   '</header>' +
 
   '<div class="card">' +
