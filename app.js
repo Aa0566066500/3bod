@@ -21,15 +21,30 @@ function apiCall(path, data, method) {
   return fetch(path, options).then(function(res) { return res.json(); });
 }
 
-// دالة توليد مفتاح عشوائي للسورسات مثل ls-28710461083
-function generateRandomKey() {
+// توليد مفتاح دخول جديد خاص بالمتصفح غير متكرر بالشكل المطلوبة ls-0173819180189191074
+function generateNewSiteKey() {
+  apiCall('/api/generate-site-key', {}).then(function(res) {
+    if (res.success && res.key) {
+      var inputEl = document.getElementById('siteKeyInput');
+      if (inputEl) inputEl.value = res.key;
+      showToast('تم إنشاء مفتاح جديد! انسخه واحتفظ به.');
+    } else {
+      showToast('فشل إنشاء المفتاح', 'error');
+    }
+  });
+}
+
+// زر توليد مفتاح السورس العشوائي داخل اللوحة
+function generateRandomScriptKey() {
   var randomDigits = Math.floor(10000000000 + Math.random() * 90000000000);
   var generatedKey = 'ls-' + randomDigits;
   
   var inputEl = document.getElementById('scriptNameInput');
-  inputEl.value = generatedKey;
-  checkNameAvailability(generatedKey);
-  showToast('تم إنشاء مفتاح جديد بنجاح!');
+  if (inputEl) {
+    inputEl.value = generatedKey;
+    checkNameAvailability(generatedKey);
+    showToast('تم توليد مفتاح السورس بنجاح!');
+  }
 }
 
 function render() {
@@ -42,18 +57,21 @@ function render() {
   }
 }
 
-// واجهة إدخال مفتاح دخول الموقع
+// واجهة تسجيل الدخول بالمفتاح الجديد
 function renderSiteAuthHTML() {
   return '<header>' +
     '<h1 class="logo">Lunex<span>Script</span></h1>' +
-    '<span style="color:var(--text-muted); font-size:13px;">حماية لوحة التحكم</span>' +
+    '<span style="color:var(--text-muted); font-size:13px;">نظام المفاتيح الآمن</span>' +
   '</header>' +
-  '<div class="card" style="max-width: 400px; margin: 60px auto;">' +
-    '<h2>أدخل مفتاح دخول الموقع</h2>' +
-    '<p class="hint" style="margin-bottom:15px;">يجب إدخال مفتاح الدخول الصحيح لفتح لوحة التحكم.</p>' +
+  '<div class="card" style="max-width: 420px; margin: 50px auto;">' +
+    '<h2>تسجيل الدخول بالمفتاح</h2>' +
+    '<p class="hint" style="margin-bottom:15px;">إذا لم يكن لديك مفتاح، انقر على زر الإنشاء أدناه للحصول على مفتاحك الفريد غير المتكرر.</p>' +
     '<form onsubmit="handleSiteAuth(event)">' +
-      '<input type="password" id="siteKeyInput" placeholder="أدخل المفتاح هنا..." required autofocus />' +
-      '<button type="submit" style="width:100%; margin-top:10px;">دخول لوحة التحكم</button>' +
+      '<div style="display: flex; gap: 8px; margin-bottom: 12px;">' +
+        '<input type="text" id="siteKeyInput" placeholder="ls-0173819180189191074" required autofocus style="margin-bottom:0; flex:1;" />' +
+        '<button type="button" class="secondary" onclick="generateNewSiteKey()" style="white-space: nowrap;">🎲 إنشاء مفتاح</button>' +
+      '</div>' +
+      '<button type="submit" style="width:100%; margin-top:5px;">دخول لوحة التحكم</button>' +
     '</form>' +
   '</div>';
 }
@@ -66,10 +84,10 @@ function handleSiteAuth(e) {
     if (res.success) {
       siteAuth = true;
       localStorage.setItem('lunex_site_auth', 'true');
-      showToast('تم التحقق بنجاح، أهلاً بك!');
+      showToast('أهلاً بك، تم تسجيل الدخول بنجاح!');
       render();
     } else {
-      showToast('مفتاح الدخول غير صحيح!', 'error');
+      showToast('المفتاح غير صحيح أو غير مسجل بالنظام!', 'error');
     }
   });
 }
@@ -84,21 +102,21 @@ function logoutSite() {
 function renderDashboardHTML() {
   var domain = window.location.host;
   return '<header>' +
-    '<h1 class="logo">Lunex<span>Script</span> <span style="font-size:14px; color:var(--text-muted); font-weight:normal;">| لوحة التحكم الآمنة</span></h1>' +
+    '<h1 class="logo">Lunex<span>Script</span> <span style="font-size:14px; color:var(--text-muted); font-weight:normal;">| لوحة الإدارة الآمنة</span></h1>' +
     '<button class="secondary" onclick="logoutSite()">تسجيل خروج</button>' +
   '</header>' +
 
   '<div class="card">' +
-    '<h2 id="formTitle">إنشاء مفتاح أو سورس جديد</h2>' +
+    '<h2 id="formTitle">نشر سورس أو مفتاح جديد</h2>' +
     '<form onsubmit="handleSaveScript(event)">' +
-      '<label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">مفتاح السورس (مثال: ls-28710461083):</label>' +
+      '<label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">اسم المفتاح (8 أحرف ورقم واحد على الأقل):</label>' +
       
       '<div style="display: flex; gap: 8px; margin-bottom: 12px;">' +
         '<input type="text" id="scriptNameInput" placeholder="ls-28710461083" oninput="checkNameAvailability(this.value)" required style="margin-bottom:0; flex:1;" />' +
-        '<button type="button" class="secondary" onclick="generateRandomKey()" style="white-space: nowrap;">🎲 إنشاء مفتاح</button>' +
+        '<button type="button" class="secondary" onclick="generateRandomScriptKey()" style="white-space: nowrap;">🎲 إنشاء مفتاح</button>' +
       '</div>' +
 
-      '<div id="nameHint" class="hint">الرابط النهائي: <span>https://' + domain + '/<span id="previewName">...</span></span></div>' +
+      '<div id="nameHint" class="hint">الرابط النهائي: <span>https://' + domain + '/3bod-Lunex-Script/<span id="previewName">...</span></span></div>' +
       '<div id="suggestionsContainer" class="suggestions" style="display:none;"></div>' +
 
       '<label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">محتوى سورس الـ Lua:</label>' +
@@ -112,7 +130,7 @@ function renderDashboardHTML() {
   '</div>' +
 
   '<div class="card">' +
-    '<h2>المفاتيح والسورسات المستضافة</h2>' +
+    '<h2>السورسات المستضافة</h2>' +
     '<div id="scriptsList">جاري التحميل...</div>' +
   '</div>';
 }
@@ -147,7 +165,7 @@ function checkNameAvailability(val) {
           suggBox.style.display = 'none';
         }
       } else {
-        document.getElementById('nameHint').innerHTML = 'الرابط النهائي: <span style="color:var(--success)">https://' + window.location.host + '/' + res.formatted + '</span> (متاح ✓)';
+        document.getElementById('nameHint').innerHTML = 'الرابط النهائي: <span style="color:var(--success)">https://' + window.location.host + '/3bod-Lunex-Script/' + res.formatted + '</span> (متاح ✓)';
         suggBox.style.display = 'none';
       }
     });
@@ -155,8 +173,11 @@ function checkNameAvailability(val) {
 }
 
 function selectSuggestion(name) {
-  document.getElementById('scriptNameInput').value = name;
-  checkNameAvailability(name);
+  var inputEl = document.getElementById('scriptNameInput');
+  if (inputEl) {
+    inputEl.value = name;
+    checkNameAvailability(name);
+  }
 }
 
 function handleSaveScript(e) {
@@ -166,7 +187,7 @@ function handleSaveScript(e) {
 
   apiCall('/api/save', { name: name, content: content }).then(function(res) {
     if (res.success) {
-      showToast('تم حفظ المفتاح بنجاح!');
+      showToast('تم حفظ المفتاح والسورس بنجاح!');
       resetForm();
       loadUserScripts();
     } else {
@@ -178,19 +199,34 @@ function handleSaveScript(e) {
 function resetForm() {
   currentEditingName = null;
   var nameInput = document.getElementById('scriptNameInput');
-  nameInput.value = '';
-  nameInput.disabled = false;
-  document.getElementById('scriptContentInput').value = '';
-  document.getElementById('formTitle').textContent = 'إنشاء مفتاح أو سورس جديد';
-  document.getElementById('saveBtn').textContent = 'حفظ النشر';
-  document.getElementById('cancelEditBtn').style.display = 'none';
-  document.getElementById('suggestionsContainer').style.display = 'none';
-  document.getElementById('nameHint').innerHTML = 'الرابط النهائي: <span>https://' + window.location.host + '/<span id="previewName">...</span></span>';
+  if (nameInput) {
+    nameInput.value = '';
+    nameInput.disabled = false;
+  }
+  var contentInput = document.getElementById('scriptContentInput');
+  if (contentInput) contentInput.value = '';
+  
+  var formTitle = document.getElementById('formTitle');
+  if (formTitle) formTitle.textContent = 'نشر سورس أو مفتاح جديد';
+  
+  var saveBtn = document.getElementById('saveBtn');
+  if (saveBtn) saveBtn.textContent = 'حفظ النشر';
+  
+  var cancelBtn = document.getElementById('cancelEditBtn');
+  if (cancelBtn) cancelBtn.style.display = 'none';
+  
+  var suggBox = document.getElementById('suggestionsContainer');
+  if (suggBox) suggBox.style.display = 'none';
+  
+  var nameHint = document.getElementById('nameHint');
+  if (nameHint) nameHint.innerHTML = 'الرابط النهائي: <span>https://' + window.location.host + '/3bod-Lunex-Script/<span id="previewName">...</span></span>';
 }
 
 function loadUserScripts() {
   apiCall('/api/scripts', {}, 'GET').then(function(res) {
     var listEl = document.getElementById('scriptsList');
+    if (!listEl) return;
+    
     if (!res.scripts || res.scripts.length === 0) {
       listEl.innerHTML = '<p style="color:var(--text-muted)">لا توجد سورسات مستضافة حتى الآن.</p>';
       return;
@@ -198,7 +234,7 @@ function loadUserScripts() {
 
     var domain = window.location.host;
     listEl.innerHTML = res.scripts.map(function(s) {
-      var loadstringCode = 'loadstring(game:HttpGet("https://' + domain + '/' + s.name + '"))()';
+      var loadstringCode = 'loadstring(game:HttpGet("https://' + domain + '/3bod-Lunex-Script/' + s.name + '"))()';
       var isRevoked = s.revoked === 1;
       var dateStr = new Date(s.updated_at).toLocaleString('ar-SA');
 
@@ -240,13 +276,25 @@ function toggleRevoke(name) {
 function editScript(name, encodedContent) {
   currentEditingName = name;
   var nameInput = document.getElementById('scriptNameInput');
-  nameInput.value = name;
-  nameInput.disabled = true;
-  document.getElementById('scriptContentInput').value = decodeURIComponent(encodedContent);
-  document.getElementById('formTitle').textContent = 'تعديل السورس للمفتاح: ' + name;
-  document.getElementById('saveBtn').textContent = 'تحديث';
-  document.getElementById('cancelEditBtn').style.display = 'inline-block';
-  document.getElementById('nameHint').innerHTML = '<span style="color:var(--text-muted)">المفتاح مقفل ولا يمكن تغييره عند التعديل.</span>';
+  if (nameInput) {
+    nameInput.value = name;
+    nameInput.disabled = true;
+  }
+  var contentInput = document.getElementById('scriptContentInput');
+  if (contentInput) contentInput.value = decodeURIComponent(encodedContent);
+  
+  var formTitle = document.getElementById('formTitle');
+  if (formTitle) formTitle.textContent = 'تعديل السورس للمفتاح: ' + name;
+  
+  var saveBtn = document.getElementById('saveBtn');
+  if (saveBtn) saveBtn.textContent = 'تحديث';
+  
+  var cancelBtn = document.getElementById('cancelEditBtn');
+  if (cancelBtn) cancelBtn.style.display = 'inline-block';
+  
+  var nameHint = document.getElementById('nameHint');
+  if (nameHint) nameHint.innerHTML = '<span style="color:var(--text-muted)">المفتاح مقفل ولا يمكن تغييره عند التعديل.</span>';
+  
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -261,29 +309,31 @@ function deleteScript(name) {
 }
 
 function openLogs(name) {
-  document.getElementById('logsModal').style.display = 'flex';
-  document.getElementById('logsContent').textContent = 'جاري جلب السجل...';
+  var modal = document.getElementById('logsModal');
+  if (modal) modal.style.display = 'flex';
+  
+  var logsContent = document.getElementById('logsContent');
+  if (logsContent) logsContent.textContent = 'جاري جلب السجل...';
   
   apiCall('/api/logs?name=' + name, {}, 'GET').then(function(res) {
-    if (res.logs) {
+    if (res.logs && logsContent) {
       currentLogsData = res.logs;
       if (res.logs.length === 0) {
-        document.getElementById('logsContent').textContent = 'لا توجد محاولات سحب مسجلة حتى الآن.';
+        logsContent.textContent = 'لا توجد محاولات سحب مسجلة حتى الآن.';
         return;
       }
-      document.getElementById('logsContent').innerHTML = res.logs.map(function(l) {
+      logsContent.innerHTML = res.logs.map(function(l) {
         var d = new Date(l.timestamp).toLocaleString('ar-SA');
         var statusIcon = l.allowed === 1 ? '✅ [مسموح]' : '❌ [مرفوض]';
         return '[' + d + '] IP: ' + l.ip + ' | ' + statusIcon + ' | السبب: ' + l.reason + '\nUA: ' + l.user_agent + '\n--------------------------------------------------';
       }).join('\n');
-    } else {
-      document.getElementById('logsContent').textContent = 'فشل في جلب السجل.';
     }
   });
 }
 
 function closeLogsModal() {
-  document.getElementById('logsModal').style.display = 'none';
+  var modal = document.getElementById('logsModal');
+  if (modal) modal.style.display = 'none';
 }
 
 function copyAllLogs() {
