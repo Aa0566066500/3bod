@@ -7,6 +7,9 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
+// مفتاح دخول الموقع الرئيسي (يمكنك تغييره إلى أي مفتاح تبيه)
+const SITE_ACCESS_KEY = "LS-MASTER-2026";
+
 // إعداد قاعدة البيانات SQLite محلياً
 const dbFile = path.join(__dirname, 'lunex.db');
 const db = new sqlite3.Database(dbFile, (err) => {
@@ -41,6 +44,15 @@ function generateUUID() {
 function formatScriptName(str) {
   return (str || '').toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
 }
+
+// API: التحقق من مفتاح دخول الموقع
+app.post('/api/verify-site-key', (req, res) => {
+  const { key } = req.body;
+  if (key === SITE_ACCESS_KEY) {
+    return res.json({ success: true });
+  }
+  res.status(401).json({ success: false, error: 'مفتاح الدخول غير صحيح' });
+});
 
 // API: فحص توفر المفتاح
 app.post('/api/check', (req, res) => {
