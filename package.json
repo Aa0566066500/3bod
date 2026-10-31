@@ -1,8 +1,0 @@
-{
-  "name": "lunex-scripts-netlify",
-  "version": "1.0.0",
-  "description": "استضافة سورسات Lua لروبلوكس بروابط raw محمية — Netlify Functions + Turso",
-  "dependencies": {
-    "@libsql/client": "^0.14.0"
-  }
-}
