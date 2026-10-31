@@ -1,10 +1,14 @@
 {
   "name": "lunex-scripts",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Lunex Scripts - Lua source hosting with browser-based owner keys",
-  "engines": { "node": ">=20" },
-  "scripts": { "start": "node server.js" },
+  "description": "LUNEX SCRIPTS source management",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
     "express": "^4.21.2",
     "helmet": "^8.1.0",
