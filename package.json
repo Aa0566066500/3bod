@@ -2,8 +2,19 @@
   "name": "lunex-script",
   "version": "2.0.0",
   "private": true,
-  "description": "Lunex.Script hosted on Netlify Functions with Supabase persistence",
-  "engines": { "node": ">=20" },
-  "scripts": { "dev": "netlify dev" },
-  "devDependencies": { "netlify-cli": "^23.0.0" }
+  "description": "Lunex.Script",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "netlify dev"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "netlify-cli": "^23.0.0"
+  }
 }
