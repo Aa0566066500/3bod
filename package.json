@@ -1,8 +1,8 @@
 {
   "name": "lunex-scripts",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
-  "description": "LUNEX SCRIPTS source management",
+  "description": "LUNEX SCRIPTS source management and publishing",
   "engines": {
     "node": ">=20"
   },
