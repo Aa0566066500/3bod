@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#08090c"><title>LUNEX SCRIPTS — مركز السورسات</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="noise"></div>
+<header class="topbar"><a class="brand" href="/"><span class="brand-mark">L</span><span>LUNEX<span class="muted"> SCRIPTS</span></span></a><div class="top-actions"><span class="status-dot"></span><span class="status-text">SYSTEM ONLINE</span><button id="keyBtn" class="ghost">مفتاح الملكية</button></div></header>
+<main class="shell">
+<section class="hero"><div class="eyebrow"><span class="line"></span> LUA SOURCE CONTROL <span class="line"></span></div><h1>كودك.<br><span>رابطك. سيطرتك.</span></h1><p class="hero-copy">انشر سورسات Roblox Lua، حدّثها وقت ما تبي، واحتفظ بروابط ثابتة.</p><div class="hero-badges"><span>● روابط ثابتة</span><span>● إصدارات قابلة للتحديث</span><span>● ملكية بمفتاح خاص</span></div></section>
+<section class="workspace">
+<div class="section-head"><div><div class="eyebrow left">YOUR WORKSPACE</div><h2>مساحة السورسات</h2></div><button id="newBtn" class="primary"><b>＋</b> سورس جديد</button></div>
+<div id="notice" class="notice hidden"></div>
+<div id="keyPanel" class="key-panel hidden"><div><b>مفتاح ملكيتك</b><p>احتفظ به خارج المتصفح. من يملكه يستطيع إدارة سورساتك.</p></div><code id="ownerKey">—</code><div class="row"><button id="copyKey" class="secondary">نسخ المفتاح</button><button id="hideKey" class="ghost">إخفاء</button></div></div>
+<div id="empty" class="empty"><div class="empty-icon">⌘</div><h3>مساحتك جاهزة</h3><p>أنشئ أول سورس، وسيظهر هنا مع رابط النشر.</p><button class="secondary" id="emptyNew">إنشاء أول سورس</button></div>
+<div id="scriptList" class="script-list"></div>
+<div class="security-note"><span class="shield">◇</span><div><b>ملكية بدون حساب</b><p>نستخدم مفتاحًا سريًا محفوظًا في هذا المتصفح. انسخه واحفظه لاستعادة الوصول لاحقًا.</p></div></div>
+</section>
+<footer><span>© <span id="year"></span> LUNEX SCRIPTS</span><span>BUILT FOR DEVELOPERS</span></footer>
+</main>
+<dialog id="editor"><form id="scriptForm"><div class="modal-head"><div><div class="eyebrow left">SOURCE EDITOR</div><h2 id="modalTitle">إنشاء سورس</h2></div><button type="button" class="icon-btn" id="closeModal">×</button></div><label for="scriptName">اسم الرابط <small>استخدم الإنجليزية والأرقام والشرطة</small></label><div class="name-input"><span>lunex-scripts.onrender.com/</span><input id="scriptName" required minlength="3" maxlength="64" placeholder="my-script" pattern="[A-Za-z0-9-]+" autocomplete="off"></div><label for="source">كود Lua / Luau</label><textarea id="source" spellcheck="false" required maxlength="500000" placeholder="-- اكتب السورس هنا..."></textarea><div class="editor-meta"><span id="count">0 حرف</span><span>يُحفظ في قاعدة البيانات</span></div><div id="editorError" class="notice error hidden"></div><div class="modal-actions"><button type="button" class="ghost" id="cancel">إلغاء</button><button type="submit" class="primary" id="saveBtn">حفظ ونشر</button></div></form></dialog>
+<script src="/app.js"></script>
+</body></html>
