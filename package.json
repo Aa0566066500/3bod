@@ -1,0 +1,8 @@
+{
+  "name": "lunex-scripts-vercel",
+  "version": "1.0.0",
+  "description": "استضافة سورسات Lua لروبلوكس بروابط raw محمية — Vercel Serverless Functions + Turso",
+  "dependencies": {
+    "@libsql/client": "^0.14.0"
+  }
+}
