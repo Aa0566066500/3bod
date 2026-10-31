@@ -1,0 +1,427 @@
+import crypto from 'node:crypto';
+
+const headers = {
+  'content-type': 'application/json; charset=utf-8',
+  'cache-control': 'no-store',
+  'x-content-type-options': 'nosniff'
+};
+
+const response = (statusCode, body) => ({
+  statusCode,
+  headers,
+  body: JSON.stringify(body)
+});
+
+const cleanName = (value = '') =>
+  String(value)
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+
+const randomKey = () =>
+  'LS-' + crypto.randomBytes(9).toString('hex').toUpperCase();
+
+function config() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    throw new Error('Supabase configuration is missing.');
+  }
+
+  return {
+    url: url.replace(/\/$/, ''),
+    key
+  };
+}
+
+async function db(table, options = {}) {
+  const c = config();
+  const method = options.method || 'GET';
+  const query = options.query || '';
+  const body = options.body;
+  const prefer = options.prefer;
+
+  const res = await fetch(
+    `${c.url}/rest/v1/${table}${query ? `?${query}` : ''}`,
+    {
+      method,
+      headers: {
+        apikey: c.key,
+        authorization: `Bearer ${c.key}`,
+        'content-type': 'application/json',
+        ...(prefer ? { prefer } : {})
+      },
+      ...(body !== undefined
+        ? { body: JSON.stringify(body) }
+        : {})
+    }
+  );
+
+  const raw = await res.text();
+
+  let data = null;
+
+  try {
+    data = raw ? JSON.parse(raw) : null;
+  } catch {
+    data = raw;
+  }
+
+  if (!res.ok) {
+    throw new Error('Database request failed.');
+  }
+
+  return data;
+}
+
+async function getBody(event) {
+  if (!event.body) return {};
+
+  try {
+    const raw = event.isBase64Encoded
+      ? Buffer.from(event.body, 'base64').toString()
+      : event.body;
+
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+async function ownerKey(event, body = {}) {
+  const key = String(
+    event.headers?.['x-lunex-key'] ||
+    body.key ||
+    body.siteKey ||
+    ''
+  ).trim();
+
+  if (!key) return null;
+
+  const rows = await db('site_keys', {
+    query:
+      `select=key,disabled&key=eq.${encodeURIComponent(key)}&limit=1`
+  });
+
+  return rows?.[0] && !rows[0].disabled
+    ? key
+    : null;
+}
+
+async function audit(action, name, actor) {
+  try {
+    await db('audit_events', {
+      method: 'POST',
+      body: {
+        action,
+        script_name: name || null,
+        actor_key_hint: actor
+          ? `${actor.slice(0, 5)}…`
+          : null
+      },
+      prefer: 'return=minimal'
+    });
+  } catch {
+    // لا نوقف العملية إذا تعذر تسجيل الحدث.
+  }
+}
+
+export default async function handler(event) {
+  try {
+    const path = (event.path || '')
+      .replace(/^\/\.netlify\/functions\/api\/?/, '')
+      .replace(/^\/api\/?/, '')
+      .replace(/\/$/, '');
+
+    const method = event.httpMethod;
+    const body = await getBody(event);
+
+    if (
+      method === 'POST' &&
+      path === 'generate-site-key'
+    ) {
+      for (let i = 0; i < 4; i++) {
+        const key = randomKey();
+
+        try {
+          await db('site_keys', {
+            method: 'POST',
+            body: { key },
+            prefer: 'return=minimal'
+          });
+
+          return response(200, {
+            success: true,
+            key
+          });
+        } catch (error) {
+          if (i === 3) throw error;
+        }
+      }
+    }
+
+    if (
+      method === 'POST' &&
+      path === 'verify-site-key'
+    ) {
+      const key = String(body.key || '').trim();
+
+      const rows = key
+        ? await db('site_keys', {
+            query:
+              `select=key,disabled&key=eq.${encodeURIComponent(key)}&limit=1`
+          })
+        : [];
+
+      if (rows?.[0] && !rows[0].disabled) {
+        return response(200, { success: true });
+      }
+
+      return response(401, {
+        success: false,
+        error: 'المفتاح غير صحيح أو معطّل.'
+      });
+    }
+
+    if (method === 'POST' && path === 'check') {
+      const name = cleanName(body.name);
+
+      if (name.length < 8 || !/\d/.test(name)) {
+        return response(200, {
+          valid: false,
+          message: 'الاسم يجب أن يكون 8 أحرف على الأقل ويحتوي رقمًا.'
+        });
+      }
+
+      const rows = await db('scripts', {
+        query:
+          `select=name&name=eq.${encodeURIComponent(name)}&limit=1`
+      });
+
+      return response(200, rows.length
+        ? { valid: false, taken: true }
+        : { valid: true, formatted: name }
+      );
+    }
+
+    const key = await ownerKey(event, body);
+
+    if (!key) {
+      return response(401, {
+        success: false,
+        error: 'سجّل الدخول بمفتاح Lunex صالح.'
+      });
+    }
+
+    if (method === 'GET' && path === 'scripts') {
+      const rows = await db('scripts', {
+        query:
+          `select=id,name,content,revoked,updated_at,created_at` +
+          `&owner_key=eq.${encodeURIComponent(key)}` +
+          '&deleted_at=is.null&order=updated_at.desc'
+      });
+
+      return response(200, {
+        scripts: rows || []
+      });
+    }
+
+    if (method === 'POST' && path === 'save') {
+      const name = cleanName(body.name);
+      const content = String(body.content || '');
+
+      if (name.length < 8 || !/\d/.test(name)) {
+        return response(400, {
+          error: 'الاسم يجب أن يكون 8 أحرف على الأقل ويحتوي رقمًا.'
+        });
+      }
+
+      if (!content.trim() || content.length > 500000) {
+        return response(400, {
+          error: 'محتوى السورس فارغ أو يتجاوز الحد المسموح.'
+        });
+      }
+
+      const existing = await db('scripts', {
+        query:
+          `select=id,name,owner_key` +
+          `&name=eq.${encodeURIComponent(name)}&limit=1`
+      });
+
+      if (
+        existing.length &&
+        existing[0].owner_key !== key
+      ) {
+        return response(409, {
+          error: 'الاسم محجوز بالفعل.'
+        });
+      }
+
+      if (existing.length) {
+        await db('scripts', {
+          method: 'PATCH',
+          query:
+            `name=eq.${encodeURIComponent(name)}` +
+            `&owner_key=eq.${encodeURIComponent(key)}`,
+          body: {
+            content,
+            updated_at: new Date().toISOString(),
+            deleted_at: null
+          },
+          prefer: 'return=minimal'
+        });
+
+        await audit('update', name, key);
+      } else {
+        await db('scripts', {
+          method: 'POST',
+          body: {
+            name,
+            content,
+            owner_key: key
+          },
+          prefer: 'return=minimal'
+        });
+
+        await audit('create', name, key);
+      }
+
+      return response(200, {
+        success: true,
+        name
+      });
+    }
+
+    if (method === 'POST' && path === 'delete') {
+      const name = cleanName(body.name);
+
+      const rows = await db('scripts', {
+        query:
+          `select=id,name` +
+          `&name=eq.${encodeURIComponent(name)}` +
+          `&owner_key=eq.${encodeURIComponent(key)}` +
+          '&deleted_at=is.null&limit=1'
+      });
+
+      if (!rows.length) {
+        return response(404, {
+          success: false,
+          error: 'السورس غير موجود أو ليس ملكك.'
+        });
+      }
+
+      await db('scripts', {
+        method: 'PATCH',
+        query:
+          `name=eq.${encodeURIComponent(name)}` +
+          `&owner_key=eq.${encodeURIComponent(key)}`,
+        body: {
+          deleted_at: new Date().toISOString(),
+          revoked: true,
+          updated_at: new Date().toISOString()
+        },
+        prefer: 'return=minimal'
+      });
+
+      await audit('delete', name, key);
+
+      return response(200, { success: true });
+    }
+
+    if (method === 'POST' && path === 'revoke') {
+      const name = cleanName(body.name);
+
+      const rows = await db('scripts', {
+        query:
+          `select=name,revoked,toggle_at` +
+          `&name=eq.${encodeURIComponent(name)}` +
+          `&owner_key=eq.${encodeURIComponent(key)}` +
+          '&deleted_at=is.null&limit=1'
+      });
+
+      if (!rows.length) {
+        return response(404, {
+          error: 'السورس غير موجود أو ليس ملكك.'
+        });
+      }
+
+      const toggled = Date.parse(rows[0].toggle_at || 0);
+
+      if (toggled && Date.now() - toggled < 10000) {
+        return response(429, {
+          error: 'انتظر 10 ثوانٍ قبل تغيير الحالة مرة أخرى.'
+        });
+      }
+
+      const revoked = !rows[0].revoked;
+
+      await db('scripts', {
+        method: 'PATCH',
+        query:
+          `name=eq.${encodeURIComponent(name)}` +
+          `&owner_key=eq.${encodeURIComponent(key)}`,
+        body: {
+          revoked,
+          toggle_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        prefer: 'return=minimal'
+      });
+
+      await audit(
+        revoked ? 'disable' : 'enable',
+        name,
+        key
+      );
+
+      return response(200, {
+        success: true,
+        revoked: revoked ? 1 : 0
+      });
+    }
+
+    if (method === 'GET' && path === 'logs') {
+      const name = cleanName(
+        event.queryStringParameters?.name || ''
+      );
+
+      const owned = await db('scripts', {
+        query:
+          `select=name&name=eq.${encodeURIComponent(name)}` +
+          `&owner_key=eq.${encodeURIComponent(key)}&limit=1`
+      });
+
+      if (!owned.length) {
+        return response(403, {
+          error: 'ليس لديك صلاحية لهذا السورس.'
+        });
+      }
+
+      const logs = await db('logs', {
+        query:
+          `select=timestamp,ip,user_agent,allowed,reason` +
+          `&script_name=eq.${encodeURIComponent(name)}` +
+          '&order=timestamp.desc&limit=100'
+      });
+
+      return response(200, {
+        logs: (logs || []).map(item => ({
+          ...item,
+          timestamp: Date.parse(item.timestamp)
+        }))
+      });
+    }
+
+    return response(404, {
+      error: 'المسار غير موجود.'
+    });
+  } catch (error) {
+    console.error('Lunex API error:', error?.message);
+
+    return response(500, {
+      error: 'حدث خطأ بالخادم. تحقق من إعدادات Supabase.'
+    });
+  }
+}
