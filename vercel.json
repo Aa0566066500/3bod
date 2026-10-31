@@ -1,5 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/:name/raw", "destination": "/api/raw?name=:name" }
-  ]
-}
