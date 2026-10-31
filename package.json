@@ -1,0 +1,10 @@
+{
+  "name": "lunex-script",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Lunex.Script hosted on Netlify Functions with Supabase persistence",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": { "dev": "netlify dev" },
+  "devDependencies": { "netlify-cli": "^23.0.0" }
+}
