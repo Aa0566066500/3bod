@@ -3,170 +3,223 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#09090d">
-  <meta name="description" content="Lunex Scripts — منصة إدارة سكربتاتك بسهولة.">
-  <title>Lunex Scripts</title>
-  <link rel="stylesheet" href="/style.css">
-  <script src="/app.js" defer></script>
+  <meta name="theme-color" content="#000000">
+  <title>LUNEX SCRIPTS</title>
+  <link rel="stylesheet" href="/style.css?v=3">
+  <script src="/app.js?v=3" defer></script>
 </head>
-
 <body>
-  <div class="app-shell">
-    <header class="topbar">
-      <a class="brand" href="/" aria-label="Lunex Scripts">
-        <span class="brand-mark">L</span>
-        <span>LUNEX <span class="brand-light">SCRIPTS</span></span>
-      </a>
+  <div id="notice" class="notice hidden" role="status"></div>
 
-      <div class="topbar-actions">
-        <span class="status-indicator">● النظام متصل</span>
-        <button id="themeToggle" class="icon-button" type="button"
-                aria-label="تغيير المظهر">◐</button>
+  <main id="welcome" class="welcome-screen">
+    <section class="login-card">
+      <div class="logo">LUNEX<span>.</span></div>
+      <div class="subtitle">SCRIPTS PLATFORM</div>
+
+      <label class="key-label" for="existingKey">
+        | مفتاح خاص للدخول للموقع بدون تسجيل دخول
+      </label>
+
+      <input
+        id="existingKey"
+        class="key-input"
+        type="text"
+        placeholder="سيظهر المفتاح هنا"
+        autocomplete="off"
+        spellcheck="false"
+      >
+
+      <div class="main-buttons">
+        <button id="createKey" class="button white-button" type="button">
+          إنشاء مفتاح
+        </button>
+
+        <button id="copyKey" class="button dark-button" type="button">
+          نسخ المفتاح
+        </button>
+
+        <button id="enterKey" class="button dark-button" type="button">
+          دخول
+        </button>
+      </div>
+
+      <button id="openSavedKey" class="saved-key-button" type="button">
+        لدي مفتاح سابق
+      </button>
+
+      <p id="welcomeError" class="error hidden"></p>
+      <div class="bottom-caption">PRIVATE ACCESS · LUNEX</div>
+    </section>
+  </main>
+
+  <section id="workspace" class="workspace hidden">
+    <header class="workspace-header">
+      <a class="workspace-logo" href="/">LUNEX<span>.</span></a>
+      <div class="header-actions">
+        <button id="logsBtn" class="button dark-button" type="button">
+          السجلات
+        </button>
+        <button id="logout" class="button dark-button" type="button">
+          خروج
+        </button>
       </div>
     </header>
 
-    <main class="main-content">
-      <section class="hero">
-        <div class="eyebrow">SCRIPT MANAGEMENT PLATFORM</div>
-        <h1>كل سكربتاتك، <span>بمكان واحد.</span></h1>
-        <p>
-          أنشئ سكربتاتك وأدرها من لوحة واحدة،
-          وتحكّم في تفعيلها وسجلات الطلبات.
-        </p>
-      </section>
-
-      <section id="authSection" class="panel auth-panel">
-        <div class="panel-heading">
-          <div>
-            <span class="section-label">GET STARTED</span>
-            <h2>ابدأ باستخدام Lunex</h2>
-            <p>أنشئ مفتاح إدارة جديدًا أو أدخل مفتاحك الحالي.</p>
-          </div>
-          <div class="panel-icon">⌘</div>
+    <div class="workspace-content">
+      <section class="key-panel">
+        <div>
+          <div class="mini-label">YOUR PRIVATE KEY</div>
+          <h2>مفتاحك الخاص</h2>
+          <code id="keyDisplay"></code>
         </div>
-
-        <button id="createKeyBtn" class="button button-primary" type="button">
-          إنشاء مفتاح جديد
+        <button id="copyKeyWorkspace" class="button white-button" type="button">
+          نسخ المفتاح
         </button>
-
-        <div class="divider"><span>أو استخدم مفتاحك</span></div>
-
-        <form id="loginForm">
-          <label for="ownerKey">مفتاح الإدارة</label>
-          <input
-            id="ownerKey"
-            name="ownerKey"
-            type="password"
-            placeholder="LS-••••••••••••••••••••"
-            autocomplete="off"
-            required
-          >
-          <button class="button button-secondary" type="submit">
-            دخول إلى لوحة التحكم
-          </button>
-        </form>
-
-        <div id="authMessage" class="message" role="status" aria-live="polite"></div>
       </section>
 
-      <section id="dashboardSection" class="dashboard" hidden>
-        <div class="dashboard-heading">
-          <div>
-            <span class="section-label">YOUR WORKSPACE</span>
-            <h2>لوحة التحكم</h2>
-            <p>إدارة السكربتات ومراجعة سجل النشاط.</p>
-          </div>
-
-          <button id="logoutBtn" class="button button-secondary" type="button">
-            تسجيل الخروج
-          </button>
+      <div class="section-heading">
+        <div>
+          <div class="mini-label">YOUR COLLECTION</div>
+          <h1>السكربتات</h1>
         </div>
+        <button id="newScript" class="button white-button" type="button">
+          + سكربت جديد
+        </button>
+      </div>
 
-        <div class="stats-grid">
-          <article class="stat-card">
-            <span>إجمالي السكربتات</span>
-            <strong id="totalScripts">0</strong>
-          </article>
-          <article class="stat-card">
-            <span>السكربتات المفعّلة</span>
-            <strong id="enabledScripts">0</strong>
-          </article>
-          <article class="stat-card">
-            <span>السكربتات المعطّلة</span>
-            <strong id="disabledScripts">0</strong>
-          </article>
-        </div>
+      <div id="scriptList" class="script-list"></div>
 
-        <div class="toolbar">
-          <div>
-            <h3>سكربتاتي</h3>
-            <p>أنشئ سكربتًا جديدًا أو عدّل سكربتًا موجودًا.</p>
-          </div>
-
-          <button id="newScriptBtn" class="button button-primary" type="button">
-            + سكربت جديد
-          </button>
-        </div>
-
-        <div id="scriptsList" class="scripts-grid"></div>
-        <div id="scriptsMessage" class="message" role="status" aria-live="polite"></div>
-
-        <section class="panel logs-panel">
-          <div class="toolbar">
-            <div>
-              <h3>سجل النشاط</h3>
-              <p>آخر الأحداث المسجلة في حسابك.</p>
-            </div>
-            <button id="refreshLogsBtn" class="button button-secondary" type="button">
-              تحديث السجل
-            </button>
-          </div>
-          <div id="logsList" class="logs-list"></div>
-        </section>
+      <section id="empty" class="empty-state hidden">
+        <div class="empty-symbol">/</div>
+        <h2>لا توجد سكربتات بعد</h2>
+        <p>أنشئ أول سكربت لك من هنا.</p>
+        <button id="emptyNew" class="button white-button" type="button">
+          إنشاء سكربت
+        </button>
       </section>
-    </main>
+    </div>
+  </section>
 
-    <footer class="footer">
-      <span>© <span id="currentYear"></span> Lunex Scripts</span>
-      <span>صُمّم لإدارة سكربتاتك بسهولة</span>
-    </footer>
+  <div id="savedKeyOverlay" class="glass-overlay hidden">
+    <section class="glass-card">
+      <button id="closeSavedKey" class="glass-close" type="button">×</button>
+      <div class="logo small-logo">LUNEX<span>.</span></div>
+      <h2>دخول بالمفتاح</h2>
+      <p>ادخل مفتاحك الخاص الذي أنشأته سابقًا.</p>
+      <label for="savedKeyInput">مفتاحك الخاص</label>
+      <input id="savedKeyInput" type="password"
+             placeholder="LS-••••••••••••••••••••">
+      <button id="savedKeyLogin" class="button white-button full-button"
+              type="button">دخول للموقع</button>
+      <p id="savedKeyError" class="error hidden"></p>
+    </section>
   </div>
 
-  <dialog id="scriptDialog" class="script-dialog">
-    <form id="scriptForm" class="dialog-content">
-      <div class="dialog-heading">
-        <div>
-          <span class="section-label">SCRIPT EDITOR</span>
-          <h2 id="dialogTitle">إنشاء سكربت</h2>
+  <div id="editor" class="glass-overlay hidden">
+    <section class="glass-card editor-card">
+      <button id="closeEditor" class="glass-close" type="button">×</button>
+      <div class="mini-label">LUNEX SCRIPT EDITOR</div>
+      <h2 id="editorTitle">إنشاء سكربت</h2>
+
+      <form id="scriptForm">
+        <label for="scriptTitle">اسم السكربت</label>
+        <input id="scriptTitle" maxlength="100" required
+               placeholder="My Script">
+
+        <label for="scriptSlug">الرابط المختصر</label>
+        <input id="scriptSlug" required placeholder="my-script">
+
+        <label for="sourceCode">الكود الأصلي</label>
+        <textarea id="sourceCode" required spellcheck="false"
+                  placeholder="-- اكتب كود Lua هنا"></textarea>
+
+        <div class="editor-footer">
+          <span id="charCount">0 حرف</span>
+          <span>الأصل محفوظ للتعديل</span>
         </div>
-        <button id="closeDialogBtn" class="icon-button" type="button"
-                aria-label="إغلاق">×</button>
-      </div>
 
-      <label for="scriptTitle">اسم السكربت</label>
-      <input id="scriptTitle" name="title" maxlength="80"
-             placeholder="My Script" required>
+        <p id="editorError" class="error hidden"></p>
 
-      <label for="scriptSlug">الرابط المختصر</label>
-      <input id="scriptSlug" name="slug" maxlength="60"
-             pattern="[A-Za-z0-9_-]+"
-             placeholder="my-script" required>
-      <small>استخدم الحروف الإنجليزية والأرقام والشرطة فقط.</small>
+        <div class="editor-actions">
+          <button id="cancelEditor" class="button dark-button"
+                  type="button">إلغاء</button>
+          <button class="button white-button" type="submit">
+            حفظ ونشر
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
 
-      <label for="scriptContent">محتوى السكربت</label>
-      <textarea id="scriptContent" name="content" rows="12"
-                spellcheck="false" placeholder="-- اكتب المحتوى هنا"
-                required></textarea>
+  <div id="logsPanel" class="glass-overlay hidden">
+    <section class="glass-card logs-card">
+      <button id="closeLogs" class="glass-close" type="button">×</button>
+      <div class="mini-label">ACTIVITY</div>
+      <h2>سجل النشاط</h2>
+      <button id="refreshLogs" class="button white-button" type="button">
+        تحديث السجلات
+      </button>
+      <div id="logsList" class="logs-list"></div>
+    </section>
+  </div>
 
-      <div id="scriptFormMessage" class="message" role="status"></div>
+  <script>
+    document.getElementById('currentYear')?.remove();
 
-      <div class="dialog-actions">
-        <button id="cancelDialogBtn" class="button button-secondary"
-                type="button">إلغاء</button>
-        <button id="saveScriptBtn" class="button button-primary"
-                type="submit">حفظ السكربت</button>
-      </div>
-    </form>
-  </dialog>
+    const openSavedKey = document.getElementById('openSavedKey');
+    const savedKeyOverlay = document.getElementById('savedKeyOverlay');
+
+    openSavedKey.addEventListener('click', () => {
+      savedKeyOverlay.classList.remove('hidden');
+      document.getElementById('savedKeyInput').focus();
+    });
+
+    document.getElementById('closeSavedKey').addEventListener('click', () => {
+      savedKeyOverlay.classList.add('hidden');
+    });
+
+    savedKeyOverlay.addEventListener('click', event => {
+      if (event.target === savedKeyOverlay) {
+        savedKeyOverlay.classList.add('hidden');
+      }
+    });
+
+    document.getElementById('savedKeyLogin').addEventListener('click', async () => {
+      const key = document.getElementById('savedKeyInput').value.trim();
+      const error = document.getElementById('savedKeyError');
+      error.classList.add('hidden');
+
+      try {
+        const response = await fetch('/api/verify-key', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key })
+        });
+        const result = await response.json();
+
+        if (!response.ok || !result.valid) {
+          throw new Error('المفتاح غير صحيح أو تم تعطيله.');
+        }
+
+        document.getElementById('existingKey').value = key;
+        savedKeyOverlay.classList.add('hidden');
+        document.getElementById('enterKey').click();
+      } catch (e) {
+        error.textContent = e.message;
+        error.classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('copyKeyWorkspace').addEventListener('click', async () => {
+      const key = document.getElementById('keyDisplay').textContent;
+      try {
+        await navigator.clipboard.writeText(key);
+        document.getElementById('notice').textContent = 'تم نسخ المفتاح';
+        document.getElementById('notice').classList.remove('hidden');
+      } catch {
+        alert('تعذر النسخ التلقائي. انسخ المفتاح يدويًا.');
+      }
+    });
+  </script>
 </body>
 </html>
