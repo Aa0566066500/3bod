@@ -9,19 +9,18 @@ const PORT = process.env.PORT || 3000;
 
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
-app.use(helmet({ contentSecurityPolicy: false }));
+
+app.use(
+  helmet({
+    contentSecurityPolicy: false
+  })
+);
+
 app.use(express.json({ limit: '500kb' }));
 
 const apiLimit = rateLimit({
   windowMs: 60_000,
   limit: 90,
-  standardHeaders: 'draft-7',
-  legacyHeaders: false
-});
-
-const requestLimit = rateLimit({
-  windowMs: 60_000,
-  limit: 60,
   standardHeaders: 'draft-7',
   legacyHeaders: false
 });
@@ -43,7 +42,13 @@ function config() {
 }
 
 async function db(table, options = {}) {
-  const { method = 'GET', query = '', body, prefer } = options;
+  const {
+    method = 'GET',
+    query = '',
+    body,
+    prefer
+  } = options;
+
   const c = config();
 
   const response = await fetch(
@@ -63,6 +68,7 @@ async function db(table, options = {}) {
   );
 
   const raw = await response.text();
+
   let data = null;
 
   try {
@@ -74,7 +80,9 @@ async function db(table, options = {}) {
   if (!response.ok) {
     const error = new Error(
       typeof data === 'object'
-        ? data?.message || data?.details || 'Database error'
+        ? data?.message ||
+          data?.details ||
+          'Database error'
         : 'Database error'
     );
 
@@ -86,7 +94,10 @@ async function db(table, options = {}) {
 }
 
 function hashKey(key) {
-  return crypto.createHash('sha256').update(key).digest('hex');
+  return crypto
+    .createHash('sha256')
+    .update(key)
+    .digest('hex');
 }
 
 function generateKey() {
@@ -117,8 +128,22 @@ function validSlug(slug) {
 
 function getKey(req) {
   return String(
-    req.get('x-lunex-key') || req.body?.key || ''
+    req.get('x-lunex-key') ||
+    req.body?.key ||
+    ''
   ).trim();
+}
+
+/*
+ * تجهيز النسخة المنشورة.
+ *
+ * هذه الدالة لا تنفذ تشويش Luau حقيقيًا.
+ * اربط بها أداة تشويش متوافقة بعد اختيارها واختبارها.
+ *
+ * حاليًا تحفظ نسخة منفصلة من الكود الأصلي.
+ */
+function buildPublishedSource(source) {
+  return String(source);
 }
 
 async function validOwner(req) {
@@ -143,7 +168,12 @@ async function validOwner(req) {
   return ownerKeyHash;
 }
 
-async function audit(eventType, slug, ownerHash, details = {}) {
+async function audit(
+  eventType,
+  slug,
+  ownerHash,
+  details = {}
+) {
   try {
     await db('audit_events', {
       method: 'POST',
@@ -177,10 +207,15 @@ function apiError(res, error) {
 }
 
 app.get('/health', (_req, res) => {
-  res.json({ ok: true, service: 'LUNEX SCRIPTS' });
+  res.json({
+    ok: true,
+    service: 'LUNEX SCRIPTS'
+  });
 });
 
 app.use('/api', apiLimit);
+
+/* إنشاء مفتاح مالك */
 
 app.post('/api/owner-key', async (_req, res) => {
   try {
@@ -191,13 +226,18 @@ app.post('/api/owner-key', async (_req, res) => {
       try {
         await db('site_keys', {
           method: 'POST',
-          body: { owner_key_hash: ownerKeyHash },
+          body: {
+            owner_key_hash: ownerKeyHash
+          },
           prefer: 'return=minimal'
         });
 
         return res.json({ key });
       } catch (error) {
-        if (error.status !== 409 && error.status !== 400) {
+        if (
+          error.status !== 409 &&
+          error.status !== 400
+        ) {
           throw error;
         }
       }
@@ -211,12 +251,16 @@ app.post('/api/owner-key', async (_req, res) => {
   }
 });
 
+/* التحقق من المفتاح */
+
 app.post('/api/verify-key', async (req, res) => {
   try {
     const key = String(req.body?.key || '').trim();
 
     if (!/^LS-\d{20}$/.test(key)) {
-      return res.status(401).json({ valid: false });
+      return res.status(401).json({
+        valid: false
+      });
     }
 
     const ownerKeyHash = hashKey(key);
@@ -227,15 +271,20 @@ app.post('/api/verify-key', async (req, res) => {
         `&owner_key_hash=eq.${ownerKeyHash}&limit=1`
     });
 
-    res.status(
-      rows?.[0] && !rows[0].disabled ? 200 : 401
-    ).json({
-      valid: !!(rows?.[0] && !rows[0].disabled)
+    const valid = !!(
+      rows?.[0] &&
+      !rows[0].disabled
+    );
+
+    res.status(valid ? 200 : 401).json({
+      valid
     });
   } catch (error) {
     apiError(res, error);
   }
 });
+
+/* عرض سكربتات المالك */
 
 app.get('/api/scripts', async (req, res) => {
   try {
@@ -254,11 +303,15 @@ app.get('/api/scripts', async (req, res) => {
         '&order=updated_at.desc'
     });
 
-    res.json({ scripts: scripts || [] });
+    res.json({
+      scripts: scripts || []
+    });
   } catch (error) {
     apiError(res, error);
   }
 });
+
+/* إنشاء سكربت */
 
 app.post('/api/scripts', async (req, res) => {
   try {
@@ -270,24 +323,37 @@ app.post('/api/scripts', async (req, res) => {
       });
     }
 
-    const slug = cleanSlug(req.body?.slug || req.body?.title);
-    const title = String(req.body?.title || slug).trim().slice(0, 100);
-    const content = String(req.body?.content || '');
+    const slug = cleanSlug(
+      req.body?.slug || req.body?.title
+    );
+
+    const title = String(
+      req.body?.title || slug
+    ).trim().slice(0, 100);
+
+    const content = String(
+      req.body?.content || ''
+    );
 
     if (!validSlug(slug)) {
       return res.status(400).json({
-        error: 'استخدم اسمًا إنجليزيًا من 3 إلى 64 حرفًا.'
+        error: 'استخدم اسمًا إنجليزيًا صالحًا للرابط.'
       });
     }
 
-    if (!title || !content.trim() || content.length > 500000) {
+    if (
+      !title ||
+      !content.trim() ||
+      content.length > 500000
+    ) {
       return res.status(400).json({
         error: 'أدخل اسمًا وكودًا صالحًا لا يتجاوز 500 ألف حرف.'
       });
     }
 
     const existing = await db('scripts', {
-      query: `select=slug&slug=eq.${encodeURIComponent(slug)}&limit=1`
+      query:
+        `select=slug&slug=eq.${encodeURIComponent(slug)}&limit=1`
     });
 
     if (existing?.length) {
@@ -296,6 +362,9 @@ app.post('/api/scripts', async (req, res) => {
       });
     }
 
+    const publishedContent =
+      buildPublishedSource(content);
+
     await db('scripts', {
       method: 'POST',
       body: {
@@ -303,12 +372,17 @@ app.post('/api/scripts', async (req, res) => {
         slug,
         title,
         content,
+        published_content: publishedContent,
         enabled: true
       },
       prefer: 'return=minimal'
     });
 
-    await audit('script_created', slug, ownerHash);
+    await audit(
+      'script_created',
+      slug,
+      ownerHash
+    );
 
     res.json({
       success: true,
@@ -320,20 +394,36 @@ app.post('/api/scripts', async (req, res) => {
   }
 });
 
+/* تعديل سكربت مع الإبقاء على رابطه */
+
 app.put('/api/scripts/:slug', async (req, res) => {
   try {
     const ownerHash = await validOwner(req);
 
     if (!ownerHash) {
-      return res.status(401).json({ error: 'المفتاح غير صحيح.' });
+      return res.status(401).json({
+        error: 'المفتاح غير صحيح.'
+      });
     }
 
     const slug = cleanSlug(req.params.slug);
-    const title = String(req.body?.title || slug).trim().slice(0, 100);
-    const content = String(req.body?.content || '');
 
-    if (!title || !content.trim() || content.length > 500000) {
-      return res.status(400).json({ error: 'الاسم أو الكود غير صالح.' });
+    const title = String(
+      req.body?.title || slug
+    ).trim().slice(0, 100);
+
+    const content = String(
+      req.body?.content || ''
+    );
+
+    if (
+      !title ||
+      !content.trim() ||
+      content.length > 500000
+    ) {
+      return res.status(400).json({
+        error: 'الاسم أو الكود غير صالح.'
+      });
     }
 
     const rows = await db('scripts', {
@@ -348,6 +438,9 @@ app.put('/api/scripts/:slug', async (req, res) => {
       });
     }
 
+    const publishedContent =
+      buildPublishedSource(content);
+
     await db('scripts', {
       method: 'PATCH',
       query:
@@ -356,25 +449,38 @@ app.put('/api/scripts/:slug', async (req, res) => {
       body: {
         title,
         content,
+        published_content: publishedContent,
         updated_at: new Date().toISOString()
       },
       prefer: 'return=minimal'
     });
 
-    await audit('script_updated', slug, ownerHash);
+    await audit(
+      'script_updated',
+      slug,
+      ownerHash
+    );
 
-    res.json({ success: true });
+    res.json({
+      success: true,
+      slug,
+      url: `${req.protocol}://${req.get('host')}/${slug}`
+    });
   } catch (error) {
     apiError(res, error);
   }
 });
+
+/* حذف سكربت */
 
 app.delete('/api/scripts/:slug', async (req, res) => {
   try {
     const ownerHash = await validOwner(req);
 
     if (!ownerHash) {
-      return res.status(401).json({ error: 'المفتاح غير صحيح.' });
+      return res.status(401).json({
+        error: 'المفتاح غير صحيح.'
+      });
     }
 
     const slug = cleanSlug(req.params.slug);
@@ -398,20 +504,30 @@ app.delete('/api/scripts/:slug', async (req, res) => {
         `&owner_key_hash=eq.${ownerHash}`
     });
 
-    await audit('script_deleted', slug, ownerHash);
+    await audit(
+      'script_deleted',
+      slug,
+      ownerHash
+    );
 
-    res.json({ success: true });
+    res.json({
+      success: true
+    });
   } catch (error) {
     apiError(res, error);
   }
 });
+
+/* تفعيل أو تعطيل سكربت */
 
 app.post('/api/scripts/:slug/toggle', async (req, res) => {
   try {
     const ownerHash = await validOwner(req);
 
     if (!ownerHash) {
-      return res.status(401).json({ error: 'المفتاح غير صحيح.' });
+      return res.status(401).json({
+        error: 'المفتاح غير صحيح.'
+      });
     }
 
     const slug = cleanSlug(req.params.slug);
@@ -431,6 +547,7 @@ app.post('/api/scripts/:slug/toggle', async (req, res) => {
 
     const script = rows[0];
     const now = Date.now();
+
     const last = script.last_toggle_at
       ? Date.parse(script.last_toggle_at)
       : 0;
@@ -444,6 +561,7 @@ app.post('/api/scripts/:slug/toggle', async (req, res) => {
     }
 
     const enabled = !script.enabled;
+    const timestamp = new Date().toISOString();
 
     await db('scripts', {
       method: 'PATCH',
@@ -452,8 +570,8 @@ app.post('/api/scripts/:slug/toggle', async (req, res) => {
         `&owner_key_hash=eq.${ownerHash}`,
       body: {
         enabled,
-        last_toggle_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        last_toggle_at: timestamp,
+        updated_at: timestamp
       },
       prefer: 'return=minimal'
     });
@@ -464,18 +582,25 @@ app.post('/api/scripts/:slug/toggle', async (req, res) => {
       ownerHash
     );
 
-    res.json({ success: true, enabled });
+    res.json({
+      success: true,
+      enabled
+    });
   } catch (error) {
     apiError(res, error);
   }
 });
+
+/* سجل الأحداث */
 
 app.get('/api/logs', async (req, res) => {
   try {
     const ownerHash = await validOwner(req);
 
     if (!ownerHash) {
-      return res.status(401).json({ error: 'المفتاح غير صحيح.' });
+      return res.status(401).json({
+        error: 'المفتاح غير صحيح.'
+      });
     }
 
     const logs = await db('audit_events', {
@@ -485,42 +610,54 @@ app.get('/api/logs', async (req, res) => {
         '&order=created_at.desc&limit=100'
     });
 
-    res.json({ logs: logs || [] });
+    res.json({
+      logs: logs || []
+    });
   } catch (error) {
     apiError(res, error);
   }
 });
 
-// Serve CSS, JS, and pages before the dynamic source route.
-app.use(express.static(publicDir, { index: 'index.html' }));
+/* رابط السكربت المنشور */
 
 app.get('/:slug', async (req, res) => {
   const slug = cleanSlug(req.params.slug);
 
   if (!validSlug(slug)) {
-    return res.status(404).sendFile(path.join(publicDir, 'not-found.html'));
+    return res
+      .status(404)
+      .sendFile(path.join(publicDir, 'not-found.html'));
   }
 
   try {
     const rows = await db('scripts', {
       query:
-        'select=slug,title,enabled,owner_key_hash' +
+        'select=slug,title,enabled,owner_key_hash,published_content' +
         `&slug=eq.${encodeURIComponent(slug)}&limit=1`
     });
 
     if (!rows?.length) {
-      await audit('unknown_slug_request', slug, null, {
-        method: req.method,
-        query: req.query.exec === '1' ? 'exec' : 'page'
-      });
+      await audit(
+        'unknown_slug_request',
+        slug,
+        null,
+        {
+          method: req.method,
+          mode: req.query.exec === '1' ? 'exec' : 'page'
+        }
+      );
 
-      return res.status(404).sendFile(path.join(publicDir, 'not-found.html'));
+      return res
+        .status(404)
+        .sendFile(path.join(publicDir, 'not-found.html'));
     }
 
     const script = rows[0];
 
     await audit(
-      script.enabled ? 'source_request' : 'disabled_source_request',
+      script.enabled
+        ? 'source_request'
+        : 'disabled_source_request',
       slug,
       script.owner_key_hash,
       {
@@ -530,30 +667,67 @@ app.get('/:slug', async (req, res) => {
     );
 
     if (!script.enabled) {
+      if (req.query.exec === '1') {
+        return res
+          .status(403)
+          .set('Cache-Control', 'no-store')
+          .type('text/plain')
+          .send("warn('[LUNEX] This source is disabled.')");
+      }
+
       return res.status(403).type('text').send(
-        "warn('[LUNEX] This source is disabled.')"
+        'هذا السكربت معطّل حاليًا.'
       );
     }
 
     if (req.query.exec === '1') {
+      if (
+        typeof script.published_content !== 'string' ||
+        !script.published_content.trim()
+      ) {
+        return res
+          .status(404)
+          .set('Cache-Control', 'no-store')
+          .type('text/plain')
+          .send("warn('[LUNEX] Published source unavailable.')");
+      }
+
       return res
         .set({
-          'Cache-Control': 'no-store',
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          Pragma: 'no-cache',
           'X-Content-Type-Options': 'nosniff'
         })
         .type('text/plain')
-        .send('Source delivery is not enabled in this starter.');
+        .send(script.published_content);
     }
 
-    res.sendFile(path.join(publicDir, 'protected.html'));
+    return res.sendFile(
+      path.join(publicDir, 'protected.html')
+    );
   } catch (error) {
-    console.error('Source route error:', error.message);
-    res.status(503).send('LUNEX SCRIPTS is temporarily unavailable.');
+    console.error(
+      'Source route error:',
+      error.message
+    );
+
+    return res
+      .status(503)
+      .type('text/plain')
+      .send('LUNEX SCRIPTS is temporarily unavailable.');
   }
 });
 
+/* الملفات الثابتة */
+
+app.use(express.static(publicDir, {
+  index: 'index.html'
+}));
+
 app.use((_req, res) => {
-  res.status(404).sendFile(path.join(publicDir, 'not-found.html'));
+  res.status(404).sendFile(
+    path.join(publicDir, 'not-found.html')
+  );
 });
 
 app.listen(PORT, () => {
